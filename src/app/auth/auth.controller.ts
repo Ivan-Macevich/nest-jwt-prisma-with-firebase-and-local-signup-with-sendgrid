@@ -14,6 +14,9 @@ import { JwtPayload } from '@common/types/jwt-payload.type';
 import { GetCurrentUser } from '@libs/security/decorators/get-current-user.decorator';
 import { Public } from '@libs/security/decorators/public.decorator';
 import { RefreshTokenStrategy } from '@libs/security/guards/refresh-token.guard';
+import { Roles } from '@app/roles/roles.decorator';
+import { Role } from '@common/enums/role.enum';
+import { RolesGuard } from '@libs/security/guards/roles.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -44,4 +47,12 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   refreshTokens() {}
+
+  @Post('rolesecured')
+  @UseGuards(RolesGuard)
+  @Roles(Role.Child)
+  @HttpCode(HttpStatus.OK)
+  roleSecured() {
+    console.log('role secured guard');
+  }
 }

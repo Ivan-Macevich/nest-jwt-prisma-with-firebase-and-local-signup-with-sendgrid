@@ -8,15 +8,15 @@ datasource db {
 }
 
 enum Gender {
-  MALE   @map("map")
-  FEMALE @map("female")
-  OTHER  @map("other")
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum Role {
-  PARENT @map("parent")
-  CHILD  @map("child")
-  ADMIN  @map("admin")
+  PARENT
+  CHILD
+  ADMIN
 }
 
 model User {

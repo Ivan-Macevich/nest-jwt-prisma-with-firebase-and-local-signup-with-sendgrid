@@ -29,7 +29,11 @@ export class AuthService {
       password: await this.securityService.hashData(signUpDto.password),
     });
 
-    const tokens = await this.securityService.signTokens(user.id, user.email);
+    const tokens = await this.securityService.signTokens(
+      user.id,
+      user.email,
+      user.role,
+    );
     await this.securityService.updateRtHash(user.id, tokens.refreshToken);
     return tokens;
   }
@@ -50,7 +54,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const tokens = await this.securityService.signTokens(user.id, user.email);
+    const tokens = await this.securityService.signTokens(
+      user.id,
+      user.email,
+      user.role,
+    );
     await this.securityService.updateRtHash(user.id, tokens.refreshToken);
     return tokens;
   }
@@ -66,7 +74,11 @@ export class AuthService {
     const rtMatches = await this.securityService.compareData(rt, user.hashedRt);
     if (!rtMatches) throw new ForbiddenException();
 
-    const tokens = await this.securityService.signTokens(user.id, user.email);
+    const tokens = await this.securityService.signTokens(
+      user.id,
+      user.email,
+      user.role,
+    );
     await this.usersRepository.updateRtHash(user.id, tokens.refreshToken);
 
     return tokens;

@@ -4,6 +4,7 @@ import { Tokens } from '@common/types/tokens.type';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Role } from '@prisma/client';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -22,8 +23,8 @@ export class SecurityService {
     return (await this.hashData(plainData)) === hashedData;
   }
 
-  async signTokens(userId: string, email: string): Promise<Tokens> {
-    const jwtPayload: JwtPayload = { sub: userId, email: email };
+  async signTokens(userId: string, email: string, role: Role): Promise<Tokens> {
+    const jwtPayload: JwtPayload = { sub: userId, email, role };
 
     const [at, rt] = await Promise.all([
       this.jwtService.signAsync(jwtPayload, {
