@@ -16,7 +16,12 @@ export default registerAs('security', () => {
   if (error) {
     throw new Error(`Config validation error: ${error.message}`);
   }
-
+  console.log({
+    rtSecret: envVars.RT_SECRET,
+    atSecret: envVars.AT_SECRET,
+    atExpiresIn: envVars.AT_EXPIRES,
+    rtExpiresIn: envVars.RT_EXPIRES,
+  });
   return {
     rtSecret: envVars.RT_SECRET,
     atSecret: envVars.AT_SECRET,

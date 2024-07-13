@@ -11,12 +11,16 @@ import { Role } from '@common/enums/role.enum';
 import { SignInDto } from './dto/sign-in.dto';
 import { LogOutDto } from './dto/log-out.dto';
 import { User } from '@prisma/client';
+import { EmailVerificationService } from '@app/email-verification/email-verification.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersRepository: UsersRepository,
     private securityService: SecurityService,
+    private emailVerificationService: EmailVerificationService,
+    private configService: ConfigService,
   ) {}
 
   async signUpLocal(signUpDto: SignUpDto): Promise<Tokens> {
@@ -34,6 +38,7 @@ export class AuthService {
       user.email,
       user.role,
     );
+
     await this.securityService.updateRtHash(user.id, tokens.refreshToken);
     return tokens;
   }

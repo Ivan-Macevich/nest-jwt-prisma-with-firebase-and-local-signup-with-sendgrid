@@ -26,6 +26,16 @@ export class UsersRepository {
     });
   }
 
+  async findOneByEmailAndEmailToken(
+    user: Pick<User, 'email' | 'emailToken'>,
+  ): Promise<User> {
+    return this.prisma.user.findUnique({
+      where: {
+        email: user.email,
+        emailToken: user.emailToken,
+      },
+    });
+  }
   async createUser(
     user: Pick<
       User,
@@ -62,6 +72,31 @@ export class UsersRepository {
       },
       data: {
         hashedRt: null,
+      },
+    });
+  }
+
+  async updateEmailToken(
+    user: Pick<User, 'email' | 'emailToken'>,
+  ): Promise<User> {
+    console.log(user.email);
+    return await this.prisma.user.update({
+      where: {
+        email: user.email,
+      },
+      data: {
+        emailToken: user.emailToken,
+      },
+    });
+  }
+
+  async verifyUser(user: Pick<User, 'email'>): Promise<User> {
+    return await this.prisma.user.update({
+      where: {
+        email: user.email,
+      },
+      data: {
+        verified: true,
       },
     });
   }

@@ -1,22 +1,26 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from '@app/auth/auth.controller';
 import { AuthService } from '@app/auth/auth.service';
-import { UsersService } from '@app/users/users.service';
-import { SecurityService } from '@libs/security/security.service';
 import { PrismaService } from '@libs/prisma/prisma.service';
 import { AccessTokenStrategy } from '@app/auth/strategies/access-token.strategy';
 import { RefreshTokenStrategy } from '@app/auth/strategies/refresh-token.strategy';
 import { JwtModule, JwtService } from '@nestjs/jwt';
-import { UsersRepository } from '@app/users/repos/users.repository';
+import { UsersModule } from '@app/users/users.module';
+import { EmailVerificationModule } from '@app/email-verification/email-verification.module';
+import { SecurityModule } from '@libs/security/security.module';
+import { EmailModule } from '@app/email/email.module';
 
 @Module({
-  imports: [JwtModule.register({})],
+  imports: [
+    JwtModule.register({}),
+    UsersModule,
+    EmailVerificationModule,
+    SecurityModule,
+    EmailModule,
+  ],
   controllers: [AuthController],
   providers: [
     AuthService,
-    UsersService,
-    UsersRepository,
-    SecurityService,
     PrismaService,
     AccessTokenStrategy,
     RefreshTokenStrategy,

@@ -20,12 +20,16 @@ enum Role {
 }
 
 model User {
-  id       String  @id @default(uuid()) @db.Uuid
-  name     String
-  lastName String
-  email    String  @unique
-  password String
-  gender   Gender
-  role     Role
-  hashedRt String?
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  lastName   String
+  email      String   @unique
+  password   String
+  gender     Gender
+  role       Role
+  verified   Boolean  @default(false)
+  hashedRt   String?
+  emailToken String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

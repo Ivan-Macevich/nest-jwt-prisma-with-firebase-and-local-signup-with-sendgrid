@@ -8,9 +8,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import config_i18n from 'configs/i18n.config';
 import config_app from 'configs/app.config';
 import config_security from 'configs/security.config';
+import config_email from 'configs/email.config';
 import { JwtModule } from '@nestjs/jwt';
 import { AccessTokenGuard } from '@libs/security/guards/access-token.guard';
 import { APP_GUARD } from '@nestjs/core';
+import { EmailVerificationModule } from '@app/email-verification/email-verification.module';
+import { EmailVerificationController } from '@app/email-verification/email-verification.controller';
+import { EmailModule } from '@app/email/email.module';
 
 @Module({
   imports: [
@@ -20,7 +24,7 @@ import { APP_GUARD } from '@nestjs/core';
     SecurityModule,
     ConfigModule.forRoot({
       envFilePath: '.env',
-      load: [config_i18n, config_app, config_security],
+      load: [config_i18n, config_app, config_security, config_email],
       isGlobal: true,
     }),
     I18nModule.forRootAsync({
@@ -33,8 +37,10 @@ import { APP_GUARD } from '@nestjs/core';
       useFactory: (config: ConfigService) => config.get('i18n'),
     }),
     JwtModule.register({}),
+    EmailVerificationModule,
+    EmailModule,
   ],
-  controllers: [],
+  controllers: [EmailVerificationController],
   providers: [{ provide: APP_GUARD, useClass: AccessTokenGuard }],
 })
 export class AppModule {}

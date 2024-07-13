@@ -43,6 +43,15 @@ export class SecurityService {
     };
   }
 
+  async signMailToken(email: string) {
+    const payload = { email };
+
+    return await this.jwtService.signAsync(payload, {
+      secret: this.configService.get<string>('email.secret'),
+      expiresIn: this.configService.get<string>('email.expiresAt'),
+    });
+  }
+
   async updateRtHash(userId: string, refreshToken: string) {
     const hashedRt = await this.hashData(refreshToken);
     await this.userRepo.updateRtHash(userId, hashedRt);
