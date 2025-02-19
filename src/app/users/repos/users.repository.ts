@@ -14,42 +14,21 @@ export class UsersRepository {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
-  async findOneByEmailAndPassword(
-    email: string,
-    password: string,
-  ): Promise<User> {
+  async findOneByPhone(phoneNumber: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: {
-        email,
-        password,
+        phoneNumber,
       },
     });
   }
 
-  async findOneByEmailAndEmailToken(
-    user: Pick<User, 'email' | 'emailToken'>,
-  ): Promise<User> {
-    return this.prisma.user.findUnique({
-      where: {
-        email: user.email,
-        emailToken: user.emailToken,
-      },
-    });
-  }
-  async createUser(
-    user: Pick<
-      User,
-      'role' | 'gender' | 'email' | 'name' | 'lastName' | 'password'
-    >,
-  ): Promise<User> {
-    return await this.prisma.user.create({
+  async createUser(data: Partial<User>): Promise<User> {
+    return this.prisma.user.create({
       data: {
-        role: user.role,
-        gender: user.gender,
-        email: user.email,
-        name: user.name,
-        lastName: user.lastName,
-        password: user.password,
+        verified: false,
+        email: data.email || '',
+        phoneNumber: data.phoneNumber || '',
+        fullName: data.fullName || '',
       },
     });
   }

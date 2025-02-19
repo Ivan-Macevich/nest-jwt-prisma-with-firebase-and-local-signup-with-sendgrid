@@ -1,7 +1,8 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
@@ -9,30 +10,17 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe());
 
-  const config = app.get(ConfigService);
-
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Api')
-    .setDescription('The API description')
+  const config = new DocumentBuilder()
+    .setTitle('Auth API')
+    .setDescription('Authentication API with phone verification')
     .setVersion('1.0')
-    .addTag('api')
-    .addBearerAuth(
-      {
-        description: 'Default JWT Authorization',
-        type: 'http',
-        in: 'header',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
-      'defaultBearerAuth',
-    )
+    .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-
+  const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  const port = config.get<number>('app.port');
+  const port = app.get(ConfigService).get<number>('app.port');
 
   await app.listen(port);
 }

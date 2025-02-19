@@ -12,9 +12,6 @@ import config_email from 'configs/email.config';
 import { JwtModule } from '@nestjs/jwt';
 import { AccessTokenGuard } from '@libs/security/guards/access-token.guard';
 import { APP_GUARD } from '@nestjs/core';
-import { EmailVerificationModule } from '@app/email-verification/email-verification.module';
-import { EmailVerificationController } from '@app/email-verification/email-verification.controller';
-import { EmailModule } from '@app/email/email.module';
 
 @Module({
   imports: [
@@ -37,10 +34,8 @@ import { EmailModule } from '@app/email/email.module';
       useFactory: (config: ConfigService) => config.get('i18n'),
     }),
     JwtModule.register({}),
-    EmailVerificationModule,
-    EmailModule,
   ],
-  controllers: [EmailVerificationController],
+  controllers: [],
   providers: [{ provide: APP_GUARD, useClass: AccessTokenGuard }],
 })
 export class AppModule {}

@@ -2,68 +2,91 @@ import { SecurityService } from '@libs/security/security.service';
 import { UsersRepository } from '@app/users/repos/users.repository';
 import {
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Tokens } from '@common/types/tokens.type';
 import { SignUpDto } from '@app/auth/dto/sign-up.dto';
-import { Role } from '@common/enums/role.enum';
 import { SignInDto } from './dto/sign-in.dto';
 import { LogOutDto } from './dto/log-out.dto';
-import { User } from '@prisma/client';
-import { EmailVerificationService } from '@app/email-verification/email-verification.service';
 import { ConfigService } from '@nestjs/config';
+import { TwilioService } from '../../libs/twilio/twilio.service';
+import { Role, User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersRepository: UsersRepository,
     private securityService: SecurityService,
-    private emailVerificationService: EmailVerificationService,
     private configService: ConfigService,
+    private twilioService: TwilioService,
   ) {}
+
+  async isPhoneNumberRegistered(phoneNumber: string): Promise<boolean> {
+    const user = await this.usersRepository.findOneByPhone(phoneNumber);
+    return !!user;
+  }
+
+  async isEmailRegistered(email: string): Promise<boolean> {
+    const user = await this.usersRepository.findOneByEmail(email);
+    if (user) {
+      throw new ForbiddenException('Email already registered');
+    }
+    return true;
+  }
 
   async signUpLocal(signUpDto: SignUpDto): Promise<Tokens> {
     const user = await this.usersRepository.createUser({
-      role: Role.Parent,
-      gender: signUpDto.gender,
       email: signUpDto.email,
-      name: signUpDto.name,
-      lastName: signUpDto.lastName,
-      password: await this.securityService.hashData(signUpDto.password),
+      fullName: signUpDto.fullName,
+      phoneNumber: signUpDto.phoneNumber,
     });
 
     const tokens = await this.securityService.signTokens(
       user.id,
       user.email,
-      user.role,
+      Role.USER,
     );
 
     await this.securityService.updateRtHash(user.id, tokens.refreshToken);
     return tokens;
   }
 
-  async signInLocal(signInDto: SignInDto): Promise<Tokens> {
-    const user = await this.usersRepository.findOneByEmail(signInDto.email);
+  async signInLocal(signInDto: SignInDto): Promise<{ message: string }> {
+    const user = await this.usersRepository.findOneByPhone(
+      signInDto.phoneNumber,
+    );
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const passwordMatches = await this.securityService.compareData(
-      signInDto.password,
-      user.password,
+    const sent = await this.twilioService.sendVerificationCode(
+      signInDto.phoneNumber,
     );
 
-    if (!passwordMatches) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!sent) {
+      throw new HttpException(
+        'Failed to send verification code',
+        HttpStatus.BAD_REQUEST,
+      );
     }
+
+    return { message: 'Verification code sent successfully' };
+  }
+  async logIn(signInDto: SignInDto): Promise<Tokens> {
+    const user = await this.usersRepository.findOneByPhone(
+      signInDto.phoneNumber,
+    );
 
     const tokens = await this.securityService.signTokens(
       user.id,
       user.email,
       user.role,
     );
+
     await this.securityService.updateRtHash(user.id, tokens.refreshToken);
     return tokens;
   }

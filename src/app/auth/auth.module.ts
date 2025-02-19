@@ -6,17 +6,17 @@ import { AccessTokenStrategy } from '@app/auth/strategies/access-token.strategy'
 import { RefreshTokenStrategy } from '@app/auth/strategies/refresh-token.strategy';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { UsersModule } from '@app/users/users.module';
-import { EmailVerificationModule } from '@app/email-verification/email-verification.module';
 import { SecurityModule } from '@libs/security/security.module';
-import { EmailModule } from '@app/email/email.module';
+import { TwilioModule } from '../../libs/twilio/twilio.module';
+import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 
 @Module({
   imports: [
     JwtModule.register({}),
     UsersModule,
-    EmailVerificationModule,
     SecurityModule,
-    EmailModule,
+    TwilioModule,
+    PhoneVerificationModule,
   ],
   controllers: [AuthController],
   providers: [
