@@ -1,36 +1,41 @@
 import { PrismaService } from '@libs/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findOneById(id: string): Promise<User> {
-    return this.prisma.user.findUnique({ where: { id } });
+  async findUserUnique(
+    where: Prisma.UserWhereUniqueInput,
+  ): Promise<User | null> {
+    return this.prisma.user.findUnique({ where });
   }
 
-  async findOneByEmail(email: string): Promise<User> {
-    return this.prisma.user.findUnique({ where: { email } });
+  async findOrCreateUser(email: string, defaultData?: Prisma.UserCreateInput) {
+    const existingUser = await this.findUserUnique({ email });
+    if (existingUser) {
+      return existingUser;
+    }
+
+    const userData = {
+      email,
+      fullName: defaultData?.fullName || email.split('@')[0] || 'User',
+      ...defaultData,
+    };
+
+    return this.createUser(userData);
   }
 
-  async findOneByPhone(phoneNumber: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: {
-        phoneNumber,
-      },
-    });
+  async createUser(data: Prisma.UserCreateInput): Promise<User> {
+    return this.prisma.user.create({ data });
   }
 
-  async createUser(data: Partial<User>): Promise<User> {
-    return this.prisma.user.create({
-      data: {
-        verified: false,
-        email: data.email || '',
-        phoneNumber: data.phoneNumber || '',
-        fullName: data.fullName || '',
-      },
-    });
+  async updateUser(
+    where: Prisma.UserWhereUniqueInput,
+    data: Prisma.UserUpdateInput,
+  ): Promise<User> {
+    return this.prisma.user.update({ where, data });
   }
 
   async updateRtHash(userId: string, hashedRt: string): Promise<User> {
@@ -58,7 +63,6 @@ export class UsersRepository {
   async updateEmailToken(
     user: Pick<User, 'email' | 'emailToken'>,
   ): Promise<User> {
-    console.log(user.email);
     return await this.prisma.user.update({
       where: {
         email: user.email,

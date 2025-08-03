@@ -11,10 +11,23 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   const config = new DocumentBuilder()
-    .setTitle('Auth API')
-    .setDescription('Authentication API with phone verification')
+    .setTitle('MindBuddy AI API')
+    .setDescription(
+      'AI-companion for your mental balance - REST API for mobile application with chat, mood tracking and personal exercises',
+    )
     .setVersion('1.0')
-    .addBearerAuth()
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      description: 'Enter JWT token for authorization',
+    })
+    .setContact(
+      'MindBuddy AI Team',
+      'https://mindbuddy.ai',
+      'support@mindbuddy.ai',
+    )
+    .setLicense('MIT', 'https://opensource.org/licenses/MIT')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

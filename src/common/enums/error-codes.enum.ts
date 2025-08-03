@@ -1,6 +1,11 @@
 export enum ErrorCodes {
   InvalidForm = 'errors.invalid-form',
 
+  InvalidOtp = 'errors.invalid-otp',
+  InvalidFirebaseToken = 'errors.invalid-firebase-token',
+  AccessDenied = 'errors.access-denied',
+
+  FieldShouldNotBeEmpty = 'errors.field-invalid.should-not-be-empty',
   FieldShouldBeString = 'errors.field-invalid.should-be-string',
   FieldShouldBeNumber = 'errors.field-invalid.should-be-number',
   FieldShouldBeEnum = 'errors.field-invalid.should-be-enum',

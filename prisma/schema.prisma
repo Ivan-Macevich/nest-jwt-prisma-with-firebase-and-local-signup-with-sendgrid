@@ -18,35 +18,107 @@ enum Role {
   ADMIN
 }
 
-model PhoneVerification {
-  id         String   @id @default(uuid()) @db.Uuid
-  phoneNumber String   @unique
-  verified    Boolean  @default(false)
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+enum PrimaryGoal {
+  CALM_DOWN
+  PRODUCTIVITY
+  BETTER_SLEEP
+  START_MEDITATION
+  IMPROVE_EMOTIONAL_INTILIGENCE
+  IMPROVE_SELF_CONFIDENCE
+  IMPROVE_SELF_CONTROL
+  FIND_SUPPORT_TALK_IT_OUT
+  STRESS_RELIEF
+  MINDFULNESS
+  IMPROVE_SELF_AWARENESS
+  JUST_TO_TRY
 }
 
-model EmailVerification {
+enum TypePreference {
+  TEXT
+  AUDIO
+  VIDEO
+  ALL
+}
+
+enum InteractionFrequency {
+  DAILY
+  SOMETIMES
+  WEEKLY
+}
+
+enum UserMood {
+  EXCELLENT
+  GOOD
+  NORMAL
+  BAD
+  HORRIBLE
+}
+
+enum TimeOfDay {
+  MORNING
+  EVENING
+  ANY
+}
+model User {
+  id         String   @id @default(uuid()) @db.Uuid
+  fullName   String?   @db.VarChar(255) @default("")
+  email      String   @unique
+  role       Role     @default(USER)
+  phoneNumber String? @unique
+  verified   Boolean  @default(false)
+  hashedRt   String?
+  mood       UserMood?
+  otps       Otp[]    @relation("UserOtps")
+  // Onboarding fields
+  age                Int?
+  privacyConsent     Boolean           @default(false)
+  onboardingCompleted Boolean          @default(false)
+      
+  gender             Gender?
+  typePreference     TypePreference?
+  primaryGoal        PrimaryGoal?
+  interactionFreq    InteractionFrequency?
+  moodLogs           MoodLogs[]
+  preferences        UserPreferences? @relation("UserPreferences")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model UserPreferences {
   id        String   @id @default(uuid()) @db.Uuid
-  email     String   @unique
-  verified  Boolean  @default(false)
-  expiresAt DateTime
+  userId    String   @unique @db.Uuid
+  user      User?    @relation("UserPreferences", fields: [userId], references: [id])
+  timeOfDay TimeOfDay?
+  frequency InteractionFrequency?
+  preferredDays String[]
+  preferredHours String[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("email_verifications")
+  @@index([userId])
 }
 
-model User {
-  id         String   @id @default(uuid()) @db.Uuid
-  fullName   String   @db.VarChar(255) @default("")
-  email      String   @unique
-  role       Role     @default(USER)
-  phoneNumber String @unique
-  verified   Boolean  @default(false)
-  hashedRt   String?
-  emailToken String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model MoodLogs {
+  id        String   @id @default(uuid()) @db.Uuid
+  mood      UserMood
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?  @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Otp {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String
+  email     String
+  isUsed    Boolean  @default(false)
+  expiresAt DateTime
+  user      User?    @relation("UserOtps", fields: [userId], references: [id])
+  userId    String?  @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
 }

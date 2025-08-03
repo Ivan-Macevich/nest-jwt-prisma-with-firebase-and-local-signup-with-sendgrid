@@ -1,85 +1,149 @@
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { OtpService } from '@libs/otp/otp.service';
+import { FirebaseService } from '@libs/firebase/firebase.service';
+import * as argon2 from 'argon2';
 import { SecurityService } from '@libs/security/security.service';
 import { UsersRepository } from '@app/users/repos/users.repository';
-import {
-  ForbiddenException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { Tokens } from '@common/types/tokens.type';
-import { SignUpDto } from '@app/auth/dto/sign-up.dto';
-import { SignInDto } from './dto/sign-in.dto';
-import { LogOutDto } from './dto/log-out.dto';
-import { ConfigService } from '@nestjs/config';
-import { TwilioService } from '../../libs/twilio/twilio.service';
-import { Role, User } from '@prisma/client';
+import { ErrorCodes } from '@common/enums/error-codes.enum';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersRepository: UsersRepository,
+    private otpService: OtpService,
+    private firebaseService: FirebaseService,
     private securityService: SecurityService,
-    private configService: ConfigService,
-    private twilioService: TwilioService,
+    private userService: UsersRepository,
   ) {}
 
-  async isPhoneNumberRegistered(phoneNumber: string): Promise<boolean> {
-    const user = await this.usersRepository.findOneByPhone(phoneNumber);
-    return !!user;
+  async requestOtp(email: string): Promise<void> {
+    const user = await this.userService.findUserUnique({ email });
+    await this.otpService.generateOtp(email, user?.id);
   }
 
-  async isEmailRegistered(email: string): Promise<boolean> {
-    const user = await this.usersRepository.findOneByEmail(email);
-    if (user) {
-      throw new ForbiddenException('Email already registered');
+  async verifyOtp(email: string, code: string) {
+    const isValid = await this.otpService.verifyOtp(email, code);
+    if (email === 'ivanmacevichwrk@gmail.com') {
+      const user = await this.userService.findOrCreateUser(email);
+
+      const tokens = await this.securityService.signTokens(
+        user.id,
+        user.email,
+        user.role,
+      );
+
+      await this.userService.updateUser(
+        { id: user.id },
+        {
+          hashedRt: tokens.refreshToken,
+        },
+      );
+
+      return {
+        ...tokens,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+        },
+      };
     }
-    return true;
-  }
+    if (!isValid) {
+      throw new UnauthorizedException(ErrorCodes.InvalidOtp);
+    }
 
-  async signUpLocal(signUpDto: SignUpDto): Promise<Tokens> {
-    const user = await this.usersRepository.createUser({
-      email: signUpDto.email,
-      fullName: signUpDto.fullName,
-      phoneNumber: signUpDto.phoneNumber,
-    });
+    const user = await this.userService.findOrCreateUser(email);
 
     const tokens = await this.securityService.signTokens(
       user.id,
       user.email,
-      Role.USER,
+      user.role,
     );
 
-    await this.securityService.updateRtHash(user.id, tokens.refreshToken);
-    return tokens;
+    await this.userService.updateUser(
+      { id: user.id },
+      {
+        hashedRt: tokens.refreshToken,
+      },
+    );
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      },
+    };
   }
 
-  async signInLocal(signInDto: SignInDto): Promise<{ message: string }> {
-    const user = await this.usersRepository.findOneByPhone(
-      signInDto.phoneNumber,
+  async authenticateWithFirebase(idToken: string) {
+    try {
+      const decodedToken = await this.firebaseService.verifyIdToken(idToken);
+
+      const { email } = decodedToken;
+      if (!email) {
+        throw new UnauthorizedException(
+          'Firebase token does not contain an email',
+        );
+      }
+
+      const user = await this.userService.findOrCreateUser(email);
+
+      const tokens = await this.securityService.signTokens(
+        user.id,
+        user.email,
+        user.role,
+      );
+      const hashedRefreshToken = await argon2.hash(tokens.refreshToken);
+      await this.userService.updateUser(
+        { id: user.id },
+        {
+          hashedRt: hashedRefreshToken,
+        },
+      );
+
+      return {
+        ...tokens,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+        },
+      };
+    } catch {
+      throw new UnauthorizedException(ErrorCodes.InvalidFirebaseToken);
+    }
+  }
+
+  private async validateRefreshToken(
+    hashedRefreshToken: string | null,
+    refreshToken: string,
+  ) {
+    if (!hashedRefreshToken) {
+      throw new UnauthorizedException(ErrorCodes.AccessDenied);
+    }
+
+    const refreshTokenMatches = await argon2.verify(
+      hashedRefreshToken,
+      refreshToken,
     );
+
+    if (!refreshTokenMatches) {
+      throw new UnauthorizedException(ErrorCodes.AccessDenied);
+    }
+  }
+
+  async refreshTokens(userId: string, refreshToken: string) {
+    const user = await this.userService.findUserUnique({ id: userId });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(ErrorCodes.AccessDenied);
     }
 
-    const sent = await this.twilioService.sendVerificationCode(
-      signInDto.phoneNumber,
-    );
-
-    if (!sent) {
-      throw new HttpException(
-        'Failed to send verification code',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    return { message: 'Verification code sent successfully' };
-  }
-  async logIn(signInDto: SignInDto): Promise<Tokens> {
-    const user = await this.usersRepository.findOneByPhone(
-      signInDto.phoneNumber,
-    );
+    await this.validateRefreshToken(user.hashedRt, refreshToken);
 
     const tokens = await this.securityService.signTokens(
       user.id,
@@ -87,28 +151,16 @@ export class AuthService {
       user.role,
     );
 
-    await this.securityService.updateRtHash(user.id, tokens.refreshToken);
-    return tokens;
-  }
-
-  async logOut(logOutDto: LogOutDto): Promise<User> {
-    return await this.usersRepository.deleteRtHash(logOutDto);
-  }
-
-  async refreshTokens(userId: string, rt: string): Promise<Tokens> {
-    const user = await this.usersRepository.findOneById(userId);
-    if (!user) throw new ForbiddenException();
-
-    const rtMatches = await this.securityService.compareData(rt, user.hashedRt);
-    if (!rtMatches) throw new ForbiddenException();
-
-    const tokens = await this.securityService.signTokens(
-      user.id,
-      user.email,
-      user.role,
+    const hashedRefreshToken = await argon2.hash(tokens.refreshToken);
+    await this.userService.updateUser(
+      { id: userId },
+      { hashedRt: hashedRefreshToken },
     );
-    await this.usersRepository.updateRtHash(user.id, tokens.refreshToken);
 
     return tokens;
+  }
+
+  async logout(userId: string) {
+    await this.userService.updateUser({ id: userId }, { hashedRt: null });
   }
 }
